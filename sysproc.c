@@ -25,7 +25,15 @@ sys_wait(void)
 {
   return wait();
 }
-
+int
+sys_wait2(void)
+{
+  int *status;
+  if(argptr(0,(char **)&status,sizeof(status)) <0){
+  return -1;
+  }
+  return wait2(status);
+}
 int
 sys_kill(void)
 {

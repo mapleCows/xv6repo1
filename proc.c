@@ -310,7 +310,42 @@ wait(void)
     sleep(curproc, &ptable.lock);  //DOC: wait-sleep
   }
 }
-
+int
+wait2(int *status)
+{
+	struct proc *p;
+	int haveKids, pid;
+	struct proc *curproc = myproc();
+	acquire(&ptable.lock);
+	for(;;){
+		haveKids = 0;
+		for(p = ptable.proc; p <&ptable.proc[NPROC];p++){
+			if(p->parent != curproc){
+				continue;
+			}
+			haveKids = 1;
+			if(p->state == ZOMBIE){
+				pid = p->pid;
+				kfree(p->kstack);
+				p->kstack = 0;
+				freevm(p->pgdir);
+				p->pid = 0;
+				p->parent = 0;
+				p->name[0] = 0;
+				p->killed = 0;
+				p->state = UNUSED;
+				release(&ptable.lock);
+				*status = p->status;
+				return pid;
+			}
+		}
+		if(!haveKids || curproc->killed){
+			release(&ptable.lock);
+			return -1;
+		}
+		sleep(curproc, &ptable.lock);
+	}
+}
 //PAGEBREAK: 42
 // Per-CPU process scheduler.
 // Each CPU calls scheduler() after setting itself up.
